@@ -1,0 +1,10 @@
+node_modules/
+dist/
+build/
+bin/
+.env
+.env.local
+*.log
+.DS_Store
+agent/nexus-agent
+agent/nexus-agent.exe
