@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus - Dashboard</title>
+<style>
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-tertiary: #1a1a26;
+  --bg-hover: #22222e;
+  --bg-active: #2a2a3a;
+  --border: #2a2a3a;
+  --border-subtle: #1e1e2e;
+  --text-primary: #e8e8f0;
+  --text-secondary: #9898b0;
+  --text-muted: #606078;
+  --accent: #4a7cff;
+  --accent-hover: #5d8cff;
+  --accent-subtle: rgba(74, 124, 255, 0.12);
+  --success: #34d399;
+  --success-subtle: rgba(52, 211, 153, 0.12);
+  --warning: #fbbf24;
+  --warning-subtle: rgba(251, 191, 36, 0.12);
+  --danger: #f87171;
+  --danger-subtle: rgba(248, 113, 113, 0.12);
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+  --transition: 150ms ease;
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; width: 100%; }
+body { font-family: var(--font-sans); background: var(--bg-primary); color: var(--text-primary); line-height: 1.5; -webkit-font-smoothing: antialiased; overflow-y: auto; }
+::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.app-layout { display: flex; flex-direction: column; min-height: 100vh; }
+.app-header { display: flex; align-items: center; padding: 0 24px; height: 56px; background: var(--bg-secondary); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px; }
+.logo-icon { width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, var(--accent), #7c3aed); display: flex; align-items: center; justify-content: center; font-size: 14px; color: #fff; font-weight: 700; }
+
+.dashboard-container { max-width: 960px; margin: 0 auto; padding: 40px 24px; }
+.dashboard-hero { text-align: center; padding: 48px 0 40px; }
+.dashboard-hero h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; }
+.dashboard-hero p { color: var(--text-secondary); font-size: 15px; }
+.connect-form { display: flex; gap: 12px; max-width: 440px; margin: 32px auto 0; position: relative; }
+.connect-form input { flex: 1; font-size: 18px; font-family: var(--font-mono); letter-spacing: 4px; text-align: center; text-transform: uppercase; padding: 14px 20px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-primary); outline: none; }
+.connect-form input:focus { border-color: var(--accent); }
+.connect-form input::placeholder { color: var(--text-muted); letter-spacing: 4px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; border: 1px solid transparent; cursor: pointer; white-space: nowrap; font-family: inherit; }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); padding: 14px 28px; font-size: 15px; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+
+.sessions-section { margin-top: 48px; }
+.sessions-section h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-secondary); }
+.session-list { display: flex; flex-direction: column; gap: 8px; }
+.session-item { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; transition: all var(--transition); }
+.session-item:hover { background: var(--bg-tertiary); border-color: var(--text-muted); }
+.session-info { display: flex; align-items: center; gap: 16px; }
+.session-code { font-family: var(--font-mono); font-size: 16px; font-weight: 600; color: var(--accent); letter-spacing: 2px; }
+.session-host { font-size: 14px; color: var(--text-secondary); }
+.session-meta { display: flex; align-items: center; gap: 12px; }
+.badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 100px; font-size: 12px; font-weight: 500; }
+.badge-success { background: var(--success-subtle); color: var(--success); }
+.badge-warning { background: var(--warning-subtle); color: var(--warning); }
+.badge-danger { background: var(--danger-subtle); color: var(--danger); }
+.badge-info { background: var(--accent-subtle); color: var(--accent); }
+
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.status-dot.connected { background: var(--success); box-shadow: 0 0 6px rgba(52, 211, 153, 0.4); }
+.status-dot.disconnected { background: var(--text-muted); }
+.agent-item { display: flex; align-items: center; gap: 12px; padding: 16px 20px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); transition: all var(--transition); }
+.agent-item:hover { background: var(--bg-tertiary); border-color: var(--text-muted); }
+.agent-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.agent-hostname { font-weight: 600; font-size: 14px; }
+.agent-detail { font-size: 12px; color: var(--text-secondary); }
+.agent-meta { display: flex; align-items: center; gap: 10px; }
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <header class="app-header">
+    <div class="logo">
+      <div class="logo-icon">N</div>
+      <span>Nexus Remote Assist</span>
+    </div>
+  </header>
+  <div class="dashboard-container">
+    <div class="dashboard-hero">
+      <h1>Remote Support Portal</h1>
+      <p>Enter a session code to connect to a remote machine</p>
+      <form class="connect-form" onsubmit="return false">
+        <input type="text" placeholder="ABC123" maxlength="6" value="" spellcheck="false">
+        <button class="btn btn-primary">Connect</button>
+      </form>
+    </div>
+
+    <div class="sessions-section">
+      <h2>Active Sessions</h2>
+      <div class="session-list">
+        <div class="session-item">
+          <div class="session-info">
+            <span class="session-code">X7K9M2</span>
+            <span class="session-host">jsmith@DESKTOP-PC01</span>
+          </div>
+          <div class="session-meta">
+            <span class="badge badge-info" style="text-transform:capitalize">windows</span>
+            <span class="badge badge-success">Connected</span>
+            <span style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono)">12m 34s</span>
+          </div>
+        </div>
+        <div class="session-item">
+          <div class="session-info">
+            <span class="session-code">P3RT5N</span>
+            <span class="session-host">admin@srv-web-03</span>
+          </div>
+          <div class="session-meta">
+            <span class="badge badge-info" style="text-transform:capitalize">linux</span>
+            <span class="badge badge-warning">Waiting</span>
+          </div>
+        </div>
+        <div class="session-item">
+          <div class="session-info">
+            <span class="session-code">H8WQ4L</span>
+            <span class="session-host">maria@MacBook-Pro</span>
+          </div>
+          <div class="session-meta">
+            <span class="badge badge-info" style="text-transform:capitalize">darwin</span>
+            <span class="badge badge-success">Connected</span>
+            <span style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono)">1h 5m</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sessions-section" style="margin-top: 32px">
+      <h2>Unattended Agents</h2>
+      <div class="session-list">
+        <div class="agent-item">
+          <span class="status-dot connected"></span>
+          <div class="agent-info">
+            <span class="agent-hostname">RECEPTION-PC</span>
+            <span class="agent-detail">frontdesk@RECEPTION-PC &middot; windows</span>
+          </div>
+          <div class="agent-meta">
+            <span class="badge badge-success">Online</span>
+            <button class="btn btn-primary btn-sm">Connect</button>
+          </div>
+        </div>
+        <div class="agent-item">
+          <span class="status-dot connected"></span>
+          <div class="agent-info">
+            <span class="agent-hostname">DEV-SERVER-01</span>
+            <span class="agent-detail">root@DEV-SERVER-01 &middot; linux</span>
+          </div>
+          <div class="agent-meta">
+            <span class="badge badge-success">Online</span>
+            <button class="btn btn-primary btn-sm">Connect</button>
+          </div>
+        </div>
+        <div class="agent-item" style="opacity: 0.5">
+          <span class="status-dot disconnected"></span>
+          <div class="agent-info">
+            <span class="agent-hostname">WAREHOUSE-KIOSK</span>
+            <span class="agent-detail">kiosk@WAREHOUSE-KIOSK &middot; windows</span>
+          </div>
+          <div class="agent-meta">
+            <span class="badge badge-danger">Offline</span>
+            <span style="font-size:11px;color:var(--text-muted)">Last seen: 2h ago</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
