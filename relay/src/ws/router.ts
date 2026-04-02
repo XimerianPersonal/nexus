@@ -6,6 +6,8 @@ import {
   handleUnattendedRegister,
   handleUnattendedConnect,
   handleUnattendedResponse,
+  handleSetAgentTags,
+  handleListGroups,
   sendAgentList,
 } from '../session/unattended';
 import { sendMessage, type ClientContext } from './handler';
@@ -55,6 +57,15 @@ export function routeMessage(ws: WebSocket, msg: ClientMessage, ctx: ClientConte
 
     case 'unattended_response':
       handleUnattendedResponse(ws, msg, ctx);
+      break;
+
+    // --- Device Groups ---
+    case 'set_agent_tags':
+      handleSetAgentTags(ws, msg, ctx);
+      break;
+
+    case 'list_groups':
+      handleListGroups(ws);
       break;
 
     default: {

@@ -20,6 +20,7 @@ var (
 	setup      = flag.Bool("setup", false, "Run initial setup for unattended access")
 	configPath = flag.String("config", "", "Path to config file (default: platform-specific)")
 	timeoutSec = flag.Int("timeout", 30, "Seconds for user to decline unattended access")
+	tags       = flag.String("tags", "", "Comma-separated group tags (e.g. \"office-ny,sales\")")
 )
 
 func main() {
@@ -66,11 +67,23 @@ func runSetup(cfgPath string) {
 	agentID := session.GenerateAgentID()
 	accessKey := session.GenerateAccessKey()
 
+	// Parse tags
+	var tagList []string
+	if *tags != "" {
+		for _, t := range strings.Split(*tags, ",") {
+			t = strings.TrimSpace(t)
+			if t != "" {
+				tagList = append(tagList, t)
+			}
+		}
+	}
+
 	cfg := &session.Config{
 		AgentID:   agentID,
 		AccessKey: accessKey,
 		ServerURL: *serverURL,
 		TimeoutMs: *timeoutSec * 1000,
+		Tags:      tagList,
 	}
 
 	if err := session.SaveConfig(cfgPath, cfg); err != nil {
@@ -81,6 +94,9 @@ func runSetup(cfgPath string) {
 	fmt.Printf("\n  Agent ID:   %s\n", agentID)
 	fmt.Printf("  Access Key: %s\n", accessKey)
 	fmt.Printf("  Timeout:    %d seconds\n", *timeoutSec)
+	if len(tagList) > 0 {
+		fmt.Printf("  Tags:       %s\n", strings.Join(tagList, ", "))
+	}
 	fmt.Printf("\n  ⚠  Save the Access Key! Support agents need it to connect.\n")
 	fmt.Printf("     The key is stored hashed on the server and cannot be recovered.\n\n")
 	fmt.Printf("  To start in unattended mode:\n")
@@ -105,7 +121,11 @@ func runUnattended(cfgPath string) {
 	fmt.Println("Starting in UNATTENDED mode...")
 	fmt.Printf("  Agent ID: %s\n", cfg.AgentID)
 	fmt.Printf("  Server:   %s\n", cfg.ServerURL)
-	fmt.Printf("  Decline timeout: %d seconds\n\n", cfg.TimeoutMs/1000)
+	fmt.Printf("  Decline timeout: %d seconds\n", cfg.TimeoutMs/1000)
+	if len(cfg.Tags) > 0 {
+		fmt.Printf("  Tags:     %s\n", strings.Join(cfg.Tags, ", "))
+	}
+	fmt.Println()
 
 	agent, err := session.NewUnattendedAgent(cfg.ServerURL, cfg)
 	if err != nil {

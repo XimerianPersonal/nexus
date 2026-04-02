@@ -12,10 +12,11 @@ import (
 
 // Config holds the persistent agent configuration for unattended access
 type Config struct {
-	AgentID   string `json:"agent_id"`
-	AccessKey string `json:"access_key"`
-	ServerURL string `json:"server_url"`
-	TimeoutMs int    `json:"timeout_ms"` // User decline timeout in ms (default 30000)
+	AgentID   string   `json:"agent_id"`
+	AccessKey string   `json:"access_key"`
+	ServerURL string   `json:"server_url"`
+	TimeoutMs int      `json:"timeout_ms"` // User decline timeout in ms (default 30000)
+	Tags      []string `json:"tags,omitempty"` // Group tags (e.g. ["office-ny", "sales"])
 }
 
 const configFileName = "nexus-agent.json"

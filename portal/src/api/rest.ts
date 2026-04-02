@@ -1,4 +1,4 @@
-import type { SessionListItem, Session, UnattendedAgentInfo } from '../../../packages/shared/src';
+import type { SessionListItem, Session, UnattendedAgentInfo, GroupInfo } from '../../../packages/shared/src';
 
 const BASE = '/api';
 
@@ -30,7 +30,13 @@ export async function endSession(code: string): Promise<void> {
   await request<void>(`/sessions/${code}/end`, { method: 'POST' });
 }
 
-export async function listUnattendedAgents(): Promise<UnattendedAgentInfo[]> {
-  const data = await request<{ agents: UnattendedAgentInfo[] }>('/agents');
+export async function listUnattendedAgents(group?: string): Promise<UnattendedAgentInfo[]> {
+  const query = group ? `?group=${encodeURIComponent(group)}` : '';
+  const data = await request<{ agents: UnattendedAgentInfo[] }>(`/agents${query}`);
   return data.agents;
+}
+
+export async function listGroups(): Promise<GroupInfo[]> {
+  const data = await request<{ groups: GroupInfo[] }>('/groups');
+  return data.groups;
 }

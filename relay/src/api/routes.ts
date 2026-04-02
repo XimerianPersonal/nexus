@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { sessionStore } from '../session/store';
 import { generateToken } from '../auth/jwt';
-import { getRegisteredAgents } from '../session/unattended';
+import { getRegisteredAgents, getGroups } from '../session/unattended';
 import type { ClientRole } from '../../../packages/shared/src';
 
 const router = Router();
@@ -50,9 +50,26 @@ router.post('/auth/token', (req: Request, res: Response) => {
  * GET /api/agents
  * List all registered unattended agents and their online status.
  */
-router.get('/agents', (_req: Request, res: Response) => {
-  const agents = getRegisteredAgents();
+router.get('/agents', (req: Request, res: Response) => {
+  let agents = getRegisteredAgents();
+
+  // Filter by group tag: GET /api/agents?group=office-ny
+  const groupFilter = req.query.group;
+  if (typeof groupFilter === 'string' && groupFilter) {
+    const tag = groupFilter.toLowerCase().trim();
+    agents = agents.filter((a) => a.tags.includes(tag));
+  }
+
   res.json({ agents });
+});
+
+/**
+ * GET /api/groups
+ * List all device groups with agent counts.
+ */
+router.get('/groups', (_req: Request, res: Response) => {
+  const groups = getGroups();
+  res.json({ groups });
 });
 
 export default router;

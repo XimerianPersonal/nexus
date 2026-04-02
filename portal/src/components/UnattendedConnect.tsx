@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type {
   UnattendedAgentInfo,
   ServerMessage,
+  GroupInfo,
 } from '../../../packages/shared/src';
 import { UNATTENDED_ACCESS_TIMEOUT_MS } from '../../../packages/shared/src';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -26,6 +27,8 @@ export default function UnattendedConnect() {
   const [result, setResult] = useState<ConnectResult | null>(null);
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [groups, setGroups] = useState<GroupInfo[]>([]);
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -37,10 +40,17 @@ export default function UnattendedConnect() {
     // Register as portal to get agent list updates
     send({ type: 'register', role: 'portal' });
 
+    // Request group list
+    send({ type: 'list_groups' });
+
     const unsub = subscribe((msg: ServerMessage) => {
       switch (msg.type) {
         case 'unattended_agent_list': {
           setAgents(msg.agents);
+          break;
+        }
+        case 'group_list': {
+          setGroups(msg.groups);
           break;
         }
         case 'unattended_access_result': {
@@ -147,7 +157,13 @@ export default function UnattendedConnect() {
     [handleConnect],
   );
 
-  if (agents.length === 0 && phase === 'idle') {
+  // Filter agents by active group tag
+  const filteredAgents = useMemo(() => {
+    if (!activeGroup) return agents;
+    return agents.filter((a) => a.tags.includes(activeGroup));
+  }, [agents, activeGroup]);
+
+  if (filteredAgents.length === 0 && agents.length === 0 && phase === 'idle') {
     return (
       <div className="empty-state">
         <div style={{ fontSize: 32, marginBottom: 8, opacity: 0.4 }}>
@@ -160,10 +176,36 @@ export default function UnattendedConnect() {
 
   return (
     <div className="unattended-section">
+      {/* Group filter bar */}
+      {phase === 'idle' && groups.length > 0 && (
+        <div className="group-filter-bar">
+          <button
+            className={`group-pill ${activeGroup === null ? 'group-pill-active' : ''}`}
+            onClick={() => setActiveGroup(null)}
+          >
+            All <span className="group-pill-count">{agents.length}</span>
+          </button>
+          {groups.map((g) => (
+            <button
+              key={g.name}
+              className={`group-pill ${activeGroup === g.name ? 'group-pill-active' : ''}`}
+              onClick={() => setActiveGroup(activeGroup === g.name ? null : g.name)}
+            >
+              {g.name} <span className="group-pill-count">{g.onlineCount}/{g.agentCount}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Agent list */}
       {phase === 'idle' && (
         <div className="session-list">
-          {agents.map((agent) => (
+          {filteredAgents.length === 0 && agents.length > 0 && (
+            <div className="empty-state" style={{ padding: '24px 0' }}>
+              <p>No agents in this group</p>
+            </div>
+          )}
+          {filteredAgents.map((agent) => (
             <div key={agent.agentId} className="session-item">
               <div className="session-info">
                 <span
@@ -176,6 +218,13 @@ export default function UnattendedConnect() {
                 <span className="session-host">
                   {agent.username} &middot; {agent.os}
                 </span>
+                {agent.tags.length > 0 && (
+                  <span className="agent-tags">
+                    {agent.tags.map((tag) => (
+                      <span key={tag} className="tag-badge">{tag}</span>
+                    ))}
+                  </span>
+                )}
               </div>
               <div className="session-meta">
                 <span

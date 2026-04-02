@@ -13,6 +13,9 @@ import type {
   UnattendedAccessResultMessage,
   UnattendedAgentListMessage,
   UnattendedAgentInfo,
+  SetAgentTagsMessage,
+  GroupListMessage,
+  GroupInfo,
   ErrorMessage,
   AgentInfo,
   PortalInfo,
@@ -30,6 +33,7 @@ interface RegisteredAgent {
   os: string;
   username: string;
   timeoutMs: number;
+  tags: string[];
   ws: WebSocket | null;
   online: boolean;
   registeredAt: number;
@@ -64,7 +68,7 @@ export function handleUnattendedRegister(
   msg: UnattendedRegisterMessage,
   ctx: ClientContext,
 ): void {
-  const { agentId, accessKey, hostname, os, username, timeoutMs } = msg;
+  const { agentId, accessKey, hostname, os, username, timeoutMs, tags } = msg;
 
   if (!agentId || !accessKey) {
     sendMessage(ws, {
@@ -98,6 +102,7 @@ export function handleUnattendedRegister(
     existing.username = username;
     existing.ctx = ctx;
     if (timeoutMs) existing.timeoutMs = timeoutMs;
+    if (tags) existing.tags = normalizeTags(tags);
   } else {
     // New registration
     registeredAgents.set(agentId, {
@@ -107,6 +112,7 @@ export function handleUnattendedRegister(
       os,
       username,
       timeoutMs: timeoutMs || UNATTENDED_ACCESS_TIMEOUT_MS,
+      tags: normalizeTags(tags || []),
       ws,
       online: true,
       registeredAt: Date.now(),
@@ -388,22 +394,9 @@ export function handleUnattendedDisconnect(ctx: ClientContext): void {
  * Send the list of registered unattended agents to a portal.
  */
 export function sendAgentList(ws: WebSocket): void {
-  const agents: UnattendedAgentInfo[] = [];
-
-  for (const agent of registeredAgents.values()) {
-    agents.push({
-      agentId: agent.agentId,
-      hostname: agent.hostname,
-      os: agent.os,
-      username: agent.username,
-      online: agent.online,
-      lastSeen: agent.lastSeenAt,
-    });
-  }
-
   sendMessage(ws, {
     type: 'unattended_agent_list',
-    agents,
+    agents: getRegisteredAgents(),
   } satisfies UnattendedAgentListMessage);
 }
 
@@ -420,7 +413,80 @@ export function getRegisteredAgents(): UnattendedAgentInfo[] {
       username: agent.username,
       online: agent.online,
       lastSeen: agent.lastSeenAt,
+      tags: agent.tags,
     });
   }
   return agents;
+}
+
+// --- Device Group / Tag Management ---
+
+/** Normalize tags: lowercase, trim, deduplicate, sort */
+function normalizeTags(tags: string[]): string[] {
+  const set = new Set(
+    tags.map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0),
+  );
+  return [...set].sort();
+}
+
+/**
+ * Handle portal setting tags on an agent.
+ */
+export function handleSetAgentTags(
+  ws: WebSocket,
+  msg: SetAgentTagsMessage,
+  _ctx: ClientContext,
+): void {
+  const agent = registeredAgents.get(msg.agentId);
+  if (!agent) {
+    sendMessage(ws, {
+      type: 'error',
+      code: 'AGENT_NOT_FOUND',
+      message: `Agent "${msg.agentId}" not found.`,
+    } satisfies ErrorMessage);
+    return;
+  }
+
+  agent.tags = normalizeTags(msg.tags);
+  console.log(`[groups] Agent "${msg.agentId}" tags set to [${agent.tags.join(', ')}]`);
+
+  // Send updated agent list back
+  sendAgentList(ws);
+}
+
+/**
+ * Handle portal requesting the list of all groups.
+ */
+export function handleListGroups(ws: WebSocket): void {
+  sendMessage(ws, {
+    type: 'group_list',
+    groups: getGroups(),
+  } satisfies GroupListMessage);
+}
+
+/**
+ * Compute the list of all groups from agent tags.
+ */
+export function getGroups(): GroupInfo[] {
+  const groupMap = new Map<string, { total: number; online: number }>();
+
+  for (const agent of registeredAgents.values()) {
+    for (const tag of agent.tags) {
+      const entry = groupMap.get(tag) || { total: 0, online: 0 };
+      entry.total++;
+      if (agent.online) entry.online++;
+      groupMap.set(tag, entry);
+    }
+  }
+
+  const groups: GroupInfo[] = [];
+  for (const [name, counts] of groupMap) {
+    groups.push({
+      name,
+      agentCount: counts.total,
+      onlineCount: counts.online,
+    });
+  }
+
+  return groups.sort((a, b) => a.name.localeCompare(b.name));
 }

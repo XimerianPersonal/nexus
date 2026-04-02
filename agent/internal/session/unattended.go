@@ -79,7 +79,7 @@ func (a *UnattendedAgent) Connect() error {
 		timeoutMs = 30000
 	}
 
-	err := a.wsClient.Send(ws.Message{
+	msg := ws.Message{
 		"type":      "unattended_register",
 		"agentId":   a.config.AgentID,
 		"accessKey": a.config.AccessKey,
@@ -87,7 +87,11 @@ func (a *UnattendedAgent) Connect() error {
 		"os":        runtime.GOOS,
 		"username":  username,
 		"timeoutMs": timeoutMs,
-	})
+	}
+	if len(a.config.Tags) > 0 {
+		msg["tags"] = a.config.Tags
+	}
+	err := a.wsClient.Send(msg)
 	if err != nil {
 		return fmt.Errorf("failed to register: %w", err)
 	}

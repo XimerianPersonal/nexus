@@ -13,7 +13,9 @@ export type ClientMessage =
   | HeartbeatMessage
   | UnattendedRegisterMessage
   | UnattendedConnectMessage
-  | UnattendedResponseMessage;
+  | UnattendedResponseMessage
+  | SetAgentTagsMessage
+  | ListGroupsMessage;
 
 // Messages sent from relay to clients
 export type ServerMessage =
@@ -30,7 +32,8 @@ export type ServerMessage =
   | UnattendedRegisteredMessage
   | UnattendedAccessRequestMessage
   | UnattendedAccessResultMessage
-  | UnattendedAgentListMessage;
+  | UnattendedAgentListMessage
+  | GroupListMessage;
 
 // --- Client -> Server ---
 
@@ -219,6 +222,7 @@ export interface UnattendedRegisterMessage {
   os: string;
   username: string;
   timeoutMs?: number;     // Custom timeout for user to decline (default 30s)
+  tags?: string[];        // Group tags for this agent (e.g. ["office-ny", "sales"])
 }
 
 /** Server confirms unattended registration */
@@ -272,4 +276,31 @@ export interface UnattendedAgentInfo {
   username: string;
   online: boolean;
   lastSeen: number;
+  tags: string[];
+}
+
+// --- Device Groups / Tags ---
+
+/** Portal sets tags on an agent (portal-side group management) */
+export interface SetAgentTagsMessage {
+  type: 'set_agent_tags';
+  agentId: string;
+  tags: string[];
+}
+
+/** Portal requests the list of all known groups */
+export interface ListGroupsMessage {
+  type: 'list_groups';
+}
+
+/** Server sends back all known groups with agent counts */
+export interface GroupListMessage {
+  type: 'group_list';
+  groups: GroupInfo[];
+}
+
+export interface GroupInfo {
+  name: string;
+  agentCount: number;
+  onlineCount: number;
 }
